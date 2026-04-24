@@ -98,12 +98,10 @@ Hosted on **Render** using GitHub integration.
 
 ## 📈 Future Enhancements
 
-* Password Reset via Email
+* Password Reset
 * Push Notifications
 * PostgreSQL Migration
-* Task Categories
 * Calendar View
-* Team Collaboration
 
 ---
 
