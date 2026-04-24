@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+body{
+    background:#0f172a;
+    color:white;
+    font-family:Segoe UI, sans-serif;
+}
+
+.navbar{
+    background:#111827;
+    box-shadow:0 4px 15px rgba(0,0,0,0.4);
+}
+
+.card-dark{
+    background:#1e293b;
+    border:none;
+    border-radius:16px;
+    color:white;
+    transition:0.3s ease;
+}
+
+.card-dark:hover{
+    transform:translateY(-5px);
+    box-shadow:0 10px 20px rgba(0,0,0,0.35);
+}
+
+.form-control, .form-select{
+    background:#334155;
+    border:none;
+    color:white;
+}
+
+.form-control:focus, .form-select:focus{
+    background:#334155;
+    color:white;
+    box-shadow:none;
+}
+
+.stat-box{
+    padding:20px;
+    text-align:center;
+}
+
+.task-btn{
+    border-radius:12px;
+}
+
+.badge{
+    padding:7px 10px;
+    font-size:12px;
+}
+</style>
+
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg px-4 py-3">
+    <a class="navbar-brand text-white fw-bold fs-4" href="#">
+        📋 TaskFlow
+    </a>
+
+    <div class="ms-auto">
+        <a href="/logout" class="btn btn-danger task-btn">Logout</a>
+    </div>
+</nav>
+
+<div class="container mt-4">
+
+<!-- FLASH MESSAGE -->
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-info">{{ msg }}</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<!-- STATS -->
+<div class="row g-3 mb-4">
+
+<div class="col-md-3">
+<div class="card card-dark stat-box">
+<h6>Total Tasks</h6>
+<h2>{{ tasks|length }}</h2>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="card card-dark stat-box">
+<h6>Pending</h6>
+<h2>
+{{ tasks | selectattr('status', 'equalto', 'Pending') | list | length }}
+</h2>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="card card-dark stat-box">
+<h6>Completed</h6>
+<h2>
+{{ tasks | selectattr('status', 'equalto', 'Completed') | list | length }}
+</h2>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="card card-dark stat-box">
+<h6>Due Today</h6>
+<h2>
+{{ tasks | selectattr('deadline', 'equalto', today) | list | length }}
+</h2>
+</div>
+</div>
+
+</div>
+
+<!-- ADD TASK -->
+<div class="card card-dark p-4 mb-4">
+
+<h4 class="mb-3">➕ Add New Task</h4>
+
+<form action="/add" method="POST" class="row g-3">
+
+<div class="col-md-4">
+<input type="text" name="title" class="form-control" placeholder="Task Title" required>
+</div>
+
+<div class="col-md-3">
+<input type="date" name="deadline" class="form-control" required>
+</div>
+
+<div class="col-md-3">
+<select name="priority" class="form-select">
+<option value="High">High</option>
+<option value="Medium">Medium</option>
+<option value="Low">Low</option>
+</select>
+</div>
+
+<div class="col-md-2">
+<button class="btn btn-primary w-100 task-btn">Add</button>
+</div>
+
+</form>
+</div>
+
+<!-- FILTER -->
+<div class="card card-dark p-4 mb-4">
+
+<form method="GET" class="row g-3">
+
+<div class="col-md-5">
+<select name="priority" class="form-select">
+<option value="">All Priority</option>
+<option value="High">High</option>
+<option value="Medium">Medium</option>
+<option value="Low">Low</option>
+</select>
+</div>
+
+<div class="col-md-5">
+<select name="status" class="form-select">
+<option value="">All Status</option>
+<option value="Pending">Pending</option>
+<option value="Completed">Completed</option>
+</select>
+</div>
+
+<div class="col-md-2">
+<button class="btn btn-warning w-100 task-btn">Filter</button>
+</div>
+
+</form>
+</div>
+
+<!-- TASK LIST -->
+<div class="row">
+
+{% for task in tasks %}
+<div class="col-md-4 mb-4">
+
+<div class="card card-dark p-3 h-100">
+
+<h5>{{ task['title'] }}</h5>
+
+<p class="text-light-emphasis">
+
+📅 {{ task['deadline'] }} <br><br>
+{% if task['deadline'] < today and task['status'] == 'Pending' %}
+<span class="badge bg-danger">Overdue</span>
+
+{% elif task['deadline'] == today and task['status'] == 'Pending' %}
+<span class="badge bg-warning text-dark">Due Today</span>
+{% endif %}
+
+<br><br>
+🔥 Priority:
+{% if task['priority'] == 'High' %}
+<span class="badge bg-danger">High</span>
+
+{% elif task['priority'] == 'Medium' %}
+<span class="badge bg-warning text-dark">Medium</span>
+
+{% else %}
+<span class="badge bg-success">Low</span>
+{% endif %}
+
+<br><br>
+📌 Status:
+{% if task['status'] == 'Pending' %}
+<span class="badge bg-secondary">Pending</span>
+
+{% else %}
+<span class="badge bg-success">Completed</span>
+{% endif %}
+
+</p>
+
+<div class="mt-auto">
+<a href="/complete/{{ task['id'] }}" class="btn btn-success btn-sm task-btn">
+Complete
+</a>
+<a href="/delete/{{ task['id'] }}" class="btn btn-outline-danger btn-sm task-btn">
+Delete
+</a>
+</div>
+</div>
+</div>
+{% endfor %}
+</div>
+</div>
+</body>
+</html>
