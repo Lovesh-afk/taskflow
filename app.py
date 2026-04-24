@@ -5,9 +5,12 @@ import smtplib
 from email.mime.text import MIMEText
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
 
+# ---------------- APP CONFIG ----------------
 app = Flask(__name__)
-app.secret_key = "secret123"
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key")
+
 
 # ---------------- SQLITE CONNECTION ----------------
 def get_db():
@@ -48,8 +51,12 @@ def init_db():
 
 # ---------------- EMAIL FUNCTION ----------------
 def send_email(to_email, subject, body):
-    sender_email = "lovesh8125@gmail.com"
-    sender_password = "uahavmxwcibkutrm"
+    sender_email = os.environ.get("EMAIL_USER")
+    sender_password = os.environ.get("EMAIL_PASS")
+
+    if not sender_email or not sender_password:
+        print("Email environment variables missing.")
+        return
 
     msg = MIMEText(body)
     msg["Subject"] = subject
@@ -69,22 +76,22 @@ def check_deadlines():
     cur = conn.cursor()
 
     cur.execute("""
-    SELECT tasks.id, tasks.title, tasks.deadline,
-           tasks.notified, users.email
-    FROM tasks
-    JOIN users ON tasks.user_id = users.id
-    WHERE tasks.status='Pending'
+        SELECT tasks.id, tasks.title, tasks.deadline,
+               tasks.notified, users.email
+        FROM tasks
+        JOIN users ON tasks.user_id = users.id
+        WHERE tasks.status='Pending'
     """)
 
     rows = cur.fetchall()
     today = str(date.today())
 
     for row in rows:
-        task_id = row[0]
-        title = row[1]
-        deadline = row[2]
-        notified = row[3]
-        user_email = row[4]
+        task_id = row["id"]
+        title = row["title"]
+        deadline = row["deadline"]
+        notified = row["notified"]
+        user_email = row["email"]
 
         if not user_email:
             continue
@@ -139,15 +146,16 @@ def register():
                 "INSERT INTO users (username,password,email) VALUES (?,?,?)",
                 (username, hashed_password, email)
             )
-            conn.commit()
 
+            conn.commit()
             flash("Registered successfully! Please login.")
             return redirect('/login')
 
         except:
             flash("Username already exists!")
 
-        conn.close()
+        finally:
+            conn.close()
 
     return render_template('register.html')
 
@@ -239,9 +247,9 @@ def add_task():
     cur = conn.cursor()
 
     cur.execute("""
-    INSERT INTO tasks
-    (user_id,title,deadline,priority,status,notified)
-    VALUES (?,?,?,?,?,?)
+        INSERT INTO tasks
+        (user_id,title,deadline,priority,status,notified)
+        VALUES (?,?,?,?,?,?)
     """, (user_id, title, deadline, priority, "Pending", 0))
 
     conn.commit()
@@ -291,7 +299,7 @@ def delete_task(id):
 @app.route('/test-email')
 def test_email():
     send_email(
-        "lovesh8125@gmail.com",
+        os.environ.get("EMAIL_USER"),
         "Test Email",
         "Your Flask email system is working!"
     )
@@ -299,8 +307,6 @@ def test_email():
 
 
 # ---------------- RUN APP ----------------
-import os
-
 if __name__ == '__main__':
     init_db()
 
